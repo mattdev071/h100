@@ -34,43 +34,43 @@ from miner.utils import download_flux_unet
 logger = get_logger(__name__)
 
 # Advanced training configuration for maximum accuracy
-class AccuracyOptimizedTrainingConfig:
+class Ranking1OptimizedTrainingConfig:
     def __init__(self):
         # H100 x8 specifications
         self.gpu_memory_gb = 80
         self.gpu_count = 8
         self.total_memory_gb = 640
         
-        # Accuracy-optimized GPU allocation mapping (4 jobs, 2 H100s per job)
+        # Ranking #1 optimized GPU allocation mapping (2 jobs, 4 H100s per job)
         self.gpu_allocation_map = {
-            "small": (2, 2),     # 1-7B models: 2 H100s for accuracy
-            "medium": (2, 2),    # 7-13B models: 2 H100s for accuracy
-            "large": (2, 2),     # 13-70B models: 2 H100s for accuracy
-            "xlarge": (2, 2),    # 70B+ models: 2 H100s for accuracy
+            "small": (4, 4),     # 1-7B models: 4 H100s for maximum accuracy
+            "medium": (4, 4),    # 7-13B models: 4 H100s for maximum accuracy
+            "large": (4, 4),     # 13-70B models: 4 H100s for maximum accuracy
+            "xlarge": (4, 4),    # 70B+ models: 4 H100s for maximum accuracy
         }
         
-        # Maximum accuracy LoRA configurations (4 jobs, 2 H100s per job)
+        # Maximum accuracy LoRA configurations (2 jobs, 4 H100s per job)
         self.lora_configs = {
-            "small": {"r": 1024, "alpha": 256, "dropout": 0.1},   # Maximum rank for accuracy
-            "medium": {"r": 1536, "alpha": 384, "dropout": 0.1},  # Maximum rank for accuracy
-            "large": {"r": 2048, "alpha": 512, "dropout": 0.1},   # Maximum rank for accuracy
-            "xlarge": {"r": 2048, "alpha": 512, "dropout": 0.1},  # Maximum rank for accuracy
+            "small": {"r": 2048, "alpha": 512, "dropout": 0.05},   # Maximum rank for ranking #1
+            "medium": {"r": 2048, "alpha": 512, "dropout": 0.05},  # Maximum rank for ranking #1
+            "large": {"r": 2048, "alpha": 512, "dropout": 0.05},   # Maximum rank for ranking #1
+            "xlarge": {"r": 2048, "alpha": 512, "dropout": 0.05},  # Maximum rank for ranking #1
         }
         
-        # Learning rate schedules optimized for accuracy
+        # Learning rate schedules optimized for ranking #1
         self.lr_schedules = {
-            "small": {"lr": 4e-4, "warmup_ratio": 0.1, "scheduler": "cosine"},
-            "medium": {"lr": 3e-4, "warmup_ratio": 0.15, "scheduler": "cosine"},
-            "large": {"lr": 2e-4, "warmup_ratio": 0.2, "scheduler": "cosine"},
-            "xlarge": {"lr": 1e-4, "warmup_ratio": 0.25, "scheduler": "cosine"},
+            "small": {"lr": 2e-4, "warmup_ratio": 0.15, "scheduler": "cosine"},
+            "medium": {"lr": 1.5e-4, "warmup_ratio": 0.2, "scheduler": "cosine"},
+            "large": {"lr": 1e-4, "warmup_ratio": 0.25, "scheduler": "cosine"},
+            "xlarge": {"lr": 5e-5, "warmup_ratio": 0.3, "scheduler": "cosine"},
         }
         
-        # Accuracy-optimized batch size configurations (4 jobs, 2 H100s per job)
+        # Ranking #1 optimized batch size configurations (2 jobs, 4 H100s per job)
         self.batch_sizes = {
-            "small": {"per_device": 32, "gradient_accumulation": 1},   # Large batches for accuracy
-            "medium": {"per_device": 24, "gradient_accumulation": 1},  # Large batches for accuracy
-            "large": {"per_device": 16, "gradient_accumulation": 1},   # Large batches for accuracy
-            "xlarge": {"per_device": 8, "gradient_accumulation": 1},   # Large batches for accuracy
+            "small": {"per_device": 64, "gradient_accumulation": 1},   # Maximum batches for ranking #1
+            "medium": {"per_device": 48, "gradient_accumulation": 1},  # Maximum batches for ranking #1
+            "large": {"per_device": 32, "gradient_accumulation": 1},   # Maximum batches for ranking #1
+            "xlarge": {"per_device": 16, "gradient_accumulation": 1},  # Maximum batches for ranking #1
         }
 
     def get_model_size_category(self, model_size: int) -> str:
@@ -122,8 +122,8 @@ class AccuracyOptimizedTrainingConfig:
         
         return 7
 
-    def get_accuracy_optimized_config(self, model_name: str, task_type: str) -> dict:
-        """Get maximum accuracy configuration for H100 x8 (4 jobs, 2 H100s per job)"""
+    def get_ranking1_optimized_config(self, model_name: str, task_type: str) -> dict:
+        """Get ranking #1 optimized configuration for H100 x8 (2 jobs, 4 H100s per job)"""
         model_size = self.estimate_model_size(model_name)
         size_category = self.get_model_size_category(model_size)
         
@@ -166,7 +166,7 @@ class AccuracyOptimizedTrainingConfig:
         return config
 
 # Global training config instance
-training_config = AccuracyOptimizedTrainingConfig()
+training_config = Ranking1OptimizedTrainingConfig()
 
 
 @dataclass

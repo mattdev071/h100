@@ -63,14 +63,14 @@ class H100x8JobSelector:
             TaskType.CHATTASK: 0.25,           # 25% weight - Equal priority
         }
         
-        # GPU allocation strategy for 8x H100
+        # GPU allocation strategy for 8x H100 - Ranking #1 optimized
         self.gpu_allocation = {
-            "text_small": [0, 1],        # 1-7B models: 2 H100s
-            "text_medium": [2, 3],       # 7-13B models: 2 H100s
-            "text_large": [4, 5],        # 13-70B models: 2 H100s
-            "text_xlarge": [6, 7],       # 70B+ models: 2 H100s
-            "image_small": [0],           # Small image tasks: 1 H100
-            "image_large": [1, 2],       # Large image tasks: 2 H100s
+            "text_small": [0, 1, 2, 3],      # 1-7B models: 4 H100s for maximum accuracy
+            "text_medium": [0, 1, 2, 3],     # 7-13B models: 4 H100s for maximum accuracy
+            "text_large": [4, 5, 6, 7],      # 13-70B models: 4 H100s for maximum accuracy
+            "text_xlarge": [4, 5, 6, 7],     # 70B+ models: 4 H100s for maximum accuracy
+            "image_small": [0, 1, 2, 3],     # Small image tasks: 4 H100s for maximum accuracy
+            "image_large": [4, 5, 6, 7],     # Large image tasks: 4 H100s for maximum accuracy
         }
         
         # Universal model family performance tracking (H100 x8 optimized)
@@ -352,56 +352,56 @@ class H100x8JobSelector:
                 del self.current_jobs[task_id]
                 logger.info(f"Automatically cleaned up expired job: {task_id}")
             
-            logger.info(f"Cleaned up {len(expired_jobs)} expired jobs. Current jobs: {len(self.current_jobs)}/4")
+            logger.info(f"Cleaned up {len(expired_jobs)} expired jobs. Current jobs: {len(self.current_jobs)}/2")
 
     def cleanup_expired_jobs(self):
         """Manual cleanup method for immediate job removal"""
         self._cleanup_expired_jobs()
 
     def can_accept_job(self, request: MinerTaskOffer) -> bool:
-        """Universal capacity management - H100 x8 can handle many jobs"""
+        """Ranking #1 optimized capacity management - H100 x8 for maximum accuracy"""
         # Clean up expired jobs before checking capacity
         self._cleanup_expired_jobs()
         
-        # Accuracy-optimized capacity for H100 x8
-        max_concurrent_jobs = 4  # Optimal for accuracy (2 H100s per job)
+        # Ranking #1 optimized capacity for H100 x8
+        max_concurrent_jobs = 2  # Optimal for ranking #1 (4 H100s per job)
         
-        # Check if we're at accuracy-optimized capacity
+        # Check if we're at ranking #1 optimized capacity
         if len(self.current_jobs) >= max_concurrent_jobs:
-            logger.warning(f"At accuracy capacity: {len(self.current_jobs)}/{max_concurrent_jobs} jobs")
+            logger.warning(f"At ranking #1 capacity: {len(self.current_jobs)}/{max_concurrent_jobs} jobs")
             return False
         
-        # H100 x8 with 2 GPUs per job for optimal accuracy
+        # H100 x8 with 4 GPUs per job for maximum accuracy
         model_size = self.estimate_model_size(request.model)
-        logger.info(f"Accuracy capacity check: {len(self.current_jobs)}/{max_concurrent_jobs} jobs, model size: {model_size}B")
+        logger.info(f"Ranking #1 capacity check: {len(self.current_jobs)}/{max_concurrent_jobs} jobs, model size: {model_size}B")
         
-        # Accept jobs within accuracy-optimized capacity limits
+        # Accept jobs within ranking #1 optimized capacity limits
         return True
 
     def should_accept_job(self, request: MinerTaskOffer) -> tuple[bool, str]:
-        """Accuracy-optimized job acceptance - 4 jobs for maximum accuracy"""
+        """Ranking #1 optimized job acceptance - 2 jobs for maximum accuracy"""
         
         # Accept ALL task types - no filtering
-        logger.info(f"Evaluating job for accuracy: {request.task_type} - {request.model} - {request.hours_to_complete}h")
+        logger.info(f"Evaluating job for ranking #1: {request.task_type} - {request.model} - {request.hours_to_complete}h")
         
-        # Priority 1: Accuracy-optimized capacity check (4 jobs for accuracy)
+        # Priority 1: Ranking #1 optimized capacity check (2 jobs for maximum accuracy)
         if not self.can_accept_job(request):
-            return False, "At accuracy-optimized capacity (4 jobs)"
+            return False, "At ranking #1 optimized capacity (2 jobs)"
         
-        # Priority 2: Time constraints (longer jobs for accuracy)
-        if request.hours_to_complete > 72:  # Extended for accuracy optimization
+        # Priority 2: Time constraints (longer jobs for maximum accuracy)
+        if request.hours_to_complete > 72:  # Extended for maximum accuracy
             return False, "Job duration too long (>72 hours)"
         
-        # Priority 3: Calculate accuracy-optimized priority
+        # Priority 3: Calculate ranking #1 optimized priority
         priority_score = self.calculate_job_priority(request)
         
-        # Accept if priority score is high (accuracy focus)
-        if priority_score > 0.70:  # Higher threshold for accuracy
-            logger.info(f"Accepting job for accuracy optimization - priority {priority_score:.3f}")
-            return True, f"Accepted for accuracy optimization - priority {priority_score:.3f}"
+        # Accept if priority score is high (ranking #1 focus)
+        if priority_score > 0.70:  # Higher threshold for ranking #1
+            logger.info(f"Accepting job for ranking #1 optimization - priority {priority_score:.3f}")
+            return True, f"Accepted for ranking #1 optimization - priority {priority_score:.3f}"
         else:
-            logger.info(f"Priority {priority_score:.3f} below accuracy threshold")
-            return False, f"Priority {priority_score:.3f} below accuracy threshold"
+            logger.info(f"Priority {priority_score:.3f} below ranking #1 threshold")
+            return False, f"Priority {priority_score:.3f} below ranking #1 threshold"
 
 # Global job selector instance
 job_selector = H100x8JobSelector()
@@ -634,9 +634,9 @@ async def get_job_status():
     
     return {
         "current_jobs": len(current_jobs),
-        "max_capacity": 4,
-        "available_slots": 4 - len(current_jobs),
-        "can_accept_jobs": len(current_jobs) < 4,
+        "max_capacity": 2,  # Ranking #1 optimized
+        "available_slots": 2 - len(current_jobs),
+        "can_accept_jobs": len(current_jobs) < 2,
         "jobs": job_details
     }
 
@@ -648,7 +648,7 @@ async def cleanup_jobs():
     return {
         "message": "Job cleanup completed",
         "current_jobs": len(job_selector.current_jobs),
-        "available_slots": 4 - len(job_selector.current_jobs)
+        "available_slots": 2 - len(job_selector.current_jobs)  # Ranking #1 optimized
     }
 
 
