@@ -41,20 +41,20 @@ class AccuracyOptimizedTrainingConfig:
         self.gpu_count = 8
         self.total_memory_gb = 640
         
-        # Model size to GPU allocation mapping for H100 x8
+        # Accuracy-optimized GPU allocation mapping (4 jobs, 2 H100s per job)
         self.gpu_allocation_map = {
-            "small": (2, 2),     # 1-7B models: 2 H100s
-            "medium": (2, 2),    # 7-13B models: 2 H100s
-            "large": (2, 2),     # 13-70B models: 2 H100s
-            "xlarge": (2, 2),    # 70B+ models: 2 H100s
+            "small": (2, 2),     # 1-7B models: 2 H100s for accuracy
+            "medium": (2, 2),    # 7-13B models: 2 H100s for accuracy
+            "large": (2, 2),     # 13-70B models: 2 H100s for accuracy
+            "xlarge": (2, 2),    # 70B+ models: 2 H100s for accuracy
         }
         
-        # Advanced LoRA configurations optimized for accuracy
+        # Maximum accuracy LoRA configurations (4 jobs, 2 H100s per job)
         self.lora_configs = {
-            "small": {"r": 256, "alpha": 64, "dropout": 0.05},
-            "medium": {"r": 512, "alpha": 128, "dropout": 0.1},
-            "large": {"r": 1024, "alpha": 256, "dropout": 0.15},
-            "xlarge": {"r": 2048, "alpha": 512, "dropout": 0.2},
+            "small": {"r": 1024, "alpha": 256, "dropout": 0.1},   # Maximum rank for accuracy
+            "medium": {"r": 1536, "alpha": 384, "dropout": 0.1},  # Maximum rank for accuracy
+            "large": {"r": 2048, "alpha": 512, "dropout": 0.1},   # Maximum rank for accuracy
+            "xlarge": {"r": 2048, "alpha": 512, "dropout": 0.1},  # Maximum rank for accuracy
         }
         
         # Learning rate schedules optimized for accuracy
@@ -65,12 +65,12 @@ class AccuracyOptimizedTrainingConfig:
             "xlarge": {"lr": 1e-4, "warmup_ratio": 0.25, "scheduler": "cosine"},
         }
         
-        # Batch size configurations optimized for accuracy
+        # Accuracy-optimized batch size configurations (4 jobs, 2 H100s per job)
         self.batch_sizes = {
-            "small": {"per_device": 16, "gradient_accumulation": 1},
-            "medium": {"per_device": 8, "gradient_accumulation": 2},
-            "large": {"per_device": 4, "gradient_accumulation": 4},
-            "xlarge": {"per_device": 2, "gradient_accumulation": 8},
+            "small": {"per_device": 32, "gradient_accumulation": 1},   # Large batches for accuracy
+            "medium": {"per_device": 24, "gradient_accumulation": 1},  # Large batches for accuracy
+            "large": {"per_device": 16, "gradient_accumulation": 1},   # Large batches for accuracy
+            "xlarge": {"per_device": 8, "gradient_accumulation": 1},   # Large batches for accuracy
         }
 
     def get_model_size_category(self, model_size: int) -> str:
@@ -123,11 +123,11 @@ class AccuracyOptimizedTrainingConfig:
         return 7
 
     def get_accuracy_optimized_config(self, model_name: str, task_type: str) -> dict:
-        """Get accuracy-optimized configuration for H100 x8"""
+        """Get maximum accuracy configuration for H100 x8 (4 jobs, 2 H100s per job)"""
         model_size = self.estimate_model_size(model_name)
         size_category = self.get_model_size_category(model_size)
         
-        # Base configuration
+        # Base configuration optimized for accuracy
         config = {
             "model_size": model_size,
             "size_category": size_category,
@@ -137,29 +137,29 @@ class AccuracyOptimizedTrainingConfig:
             "batch_config": self.batch_sizes[size_category],
         }
         
-        # Task-specific accuracy optimizations
+        # Task-specific maximum accuracy optimizations
         if task_type == "instruct":
-            # Optimize for instruction following and reasoning
-            config["lora_config"]["r"] = min(config["lora_config"]["r"] * 1.4, 2048)
-            config["lr_config"]["lr"] *= 1.2
+            # Maximum accuracy for instruction following
+            config["lora_config"]["r"] = 2048  # Maximum rank
+            config["lr_config"]["lr"] *= 1.1   # Slightly higher LR
             config["eval_steps"] = 50
             config["save_steps"] = 100
         elif task_type == "grpo":
-            # Optimize for reward optimization (higher loss is better)
-            config["lora_config"]["r"] = min(config["lora_config"]["r"] * 1.6, 2048)
-            config["lr_config"]["lr"] *= 0.85  # Lower LR for stability
+            # Maximum accuracy for reward optimization
+            config["lora_config"]["r"] = 2048  # Maximum rank
+            config["lr_config"]["lr"] *= 0.9   # Stable LR for accuracy
             config["eval_steps"] = 25
             config["save_steps"] = 50
         elif task_type == "dpo":
-            # Optimize for preference learning
-            config["lora_config"]["r"] = min(config["lora_config"]["r"] * 1.3, 2048)
-            config["lr_config"]["lr"] *= 1.15
+            # Maximum accuracy for preference learning
+            config["lora_config"]["r"] = 2048  # Maximum rank
+            config["lr_config"]["lr"] *= 1.05  # Balanced LR
             config["eval_steps"] = 50
             config["save_steps"] = 100
         elif task_type == "image":
-            # Optimize for visual quality
-            config["lora_config"]["r"] = min(config["lora_config"]["r"] * 1.5, 2048)
-            config["lr_config"]["lr"] *= 1.1
+            # Maximum accuracy for visual quality
+            config["lora_config"]["r"] = 2048  # Maximum rank
+            config["lr_config"]["lr"] *= 1.0   # Standard LR
             config["eval_steps"] = 100
             config["save_steps"] = 200
         
